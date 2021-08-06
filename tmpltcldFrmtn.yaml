@@ -1,0 +1,155 @@
+  Parameters:
+    PublicSubnet1CIDR:
+      Description: Please enter the IP range (CIDR) for the public subnet in the first Availability Zone
+      Type: String
+      Default: 172.31.1.0/24
+
+  PrivateSubnet1CIDR:
+      Description: Please enter the IP range (CIDR) for the Private subnet in the first Availability Zone
+      Type: String
+      Default: 172.31.3.0/24
+
+  VpcCidr:
+      Description: Please enter the IP range (CIDR) for the VPC
+      Type: String
+      Default: 172.31.0.0/24
+
+  KeyName:
+      Description: Name of the existing EC2 KeyPair to enable RDP access to the instance
+      Type: Windows
+      Default: AWS::EC2::KeyPair::KeyName
+      ConstraintDescription: must be the name of an existing EC2 KeyPair
+  
+  InstanceType:
+      Description: App EC2 instance type
+      Type: String
+      Default: t2.small
+      ConstraintDescription: must be a valid EC2 instance type.
+
+Resources:
+    PubPrivateVPC:
+      Type: 'AWS::EC2::VPC'
+      Properties:
+          CidrBlock: T!Ref VpcCidr
+          Tags:
+          - Key: Name
+            Value: Cust VPC
+
+    InternetGateway:
+      Type: 'AWS::EC2::InternetGateway'
+      Properties:
+        Tags:
+          - Key: Nmae
+            Value: IGW
+          - Key: Network
+            Value: Public
+
+    GatewayToInternet:
+      Type: 'AWS::EC2::VPCGatewayAttachment'
+      Properties:
+        VpcId: !Ref InternetGateway
+
+    PublicSubnet1:
+      Type: 'AWS::EC2::Subnet'
+      Properties:
+        VpcId: !Ref PubPrivateVPC
+        AvailabilityZone: !Select [ 0, !GetAZs ]
+        CidrBlock: !Ref PublicSubnet1CIDR
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: Public Subnet (AZ1)
+
+    PrivateSubnet1:
+      Type: 'AWS::EC2::Subnet'
+      Properties:
+        VpcId: !Ref PubPrivateVPC
+        AvailabilityZone: !Select [ 0, !GetAZs ]
+        CidrBlock: !Ref PrivateSubnet1CIDR
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: Private Subnet (AZ1)
+
+    PublicRouteTable1:
+      Type: 'AWS::EC2::RouteTable'
+      Properties:
+        VpcId: !Ref PubPrivateVPC
+        Tags:
+          - Key: Name
+            Value: Public Routes
+          - Key: Network
+            Value: Public
+
+    PublicRoute1:
+      Type: 'AWS::EC2::Route'
+      DependsOn: GatewayToInternet
+      Properties:
+        RouteTableId: !Ref PublicRouteTable1
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref InternetGateway
+
+    PublicSubnet1RouteTableAssociation:
+      Type: 'AWS::EC2::SubnetRouteTableAssociation'
+      Properties:
+        SubnetId: !Ref PublicSubnet1
+        RouteTableId: !Ref PublicRouteTable1
+
+    NatGateway1:
+      Type: 'AWS::EC2::NatGateway'
+      DependsOn: NatPublicIP1
+      Properties:
+        AllocationId: !GetAtt NatPublicIP1.AllocationID
+        SubnetId: !Ref PublicSubnet1
+
+    NatPublicIP1:
+      Type: 'AWS::EC2::EIP'
+      DependsOn: PubPrivateVPC
+      Properties:
+        Domain: vpc
+
+    PrivateRouteTable1:
+      Type: 'AWS::EC2::RouteTable'
+      Properties:
+        VpcId: !Ref PubPrivateVPC
+        Tags:
+          - Key: Name
+            Value: Private Routes (AZ1)
+          - Key: Network
+            Value: Private
+
+    PrivateRoute1:
+      Type: 'AWS::EC2::Route'
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NatGateway1
+
+    PrivateSubnet1RouteTableAssociation:
+      Type: 'AWS::EC2::Subnet1RouteTableAssociation'
+      Properties:
+        SubnetId: !Ref PrivateSubnet1
+        RouteTableId: !Ref PrivateRouteTable1
+
+    EC2INST01:
+      Type: 'AWS::EC2::Instance'
+      Properties:
+        InstanceType:
+          Ref: InstanceType
+        KeyName:
+          Ref: KeyName
+        DisableApiTermination: true
+        EbsOptimized: true
+        ImageId: ami-04871e990097e4112
+        SubnetId:
+          Ref: PublicSubnet1
+        SecurityGroupIds:
+          - sg-01576790afff73558
+        Tags:
+          - Key: Name
+            Value: EC2Test01
+          - Key: Environment 
+            Value: Test
+
+ 
+    
