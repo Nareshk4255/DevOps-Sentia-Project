@@ -8,3 +8,4 @@ The following will be uploaded:
 - An IaC project for deploying an MVP demo.
 - A simple time log of the activities we have performed.
 - A document of assumptions and decisions we have made.
+- Goed gedaan Naresh!
