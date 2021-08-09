@@ -8,3 +8,10 @@ The following will be uploaded:
 - An IaC project for deploying an MVP demo.
 - A simple time log of the activities we have performed.
 - A document of assumptions and decisions we have made.
+
+You can find the scenario of the assignment in the link below:
+[link text itself]: https://github.com/sentialabs/public-cloud-recruitment/blob/master/ASSIGNEMENT.md
+
+
+
+
